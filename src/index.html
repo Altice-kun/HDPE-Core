@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Windows Upgrade Requirements Scanner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+:root{
+  --bg0:#06060c;--bg1:#0b0b17;--bg2:#0f0f1e;--bg3:#141428;
+  --bd:#1a1a32;--bdb:#222240;
+  --acc:#4f8ef7;--acc2:#7c5cfc;--acc3:#00d4ff;
+  --green:#1fcf96;--yellow:#f0c040;--red:#f04f6a;--purple:#b06eff;--orange:#ff8c42;
+  --t1:#eaeaf8;--t2:#8888bc;--t3:#484880;
+  --r:8px;
+  --fd:'Rajdhani','Noto Sans JP',sans-serif;
+  --fm:'Space Mono',monospace;
+  --fb:'Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--t1);font-family:var(--fb);font-size:13px;display:flex;flex-direction:column;user-select:none}
+
+/* ── Titlebar ─────────────────────────────────────────────── */
+.tb{height:44px;background:var(--bg1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;-webkit-app-region:drag;flex-shrink:0;gap:10px}
+.tb-logo{font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--acc);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.tb-abbr{font-family:var(--fd);font-size:17px;font-weight:700;color:white;letter-spacing:1px}
+.tb-abbr span{color:var(--acc)}
+.tb-full{font-family:var(--fb);font-size:10px;color:var(--t3);letter-spacing:.5px;margin-left:2px;padding-top:2px}
+.tb-sep{flex:1}
+.tb-stat{font-family:var(--fm);font-size:9px;color:var(--t3);letter-spacing:1.5px;display:flex;align-items:center;gap:6px}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:background .4s}
+.tb-dot.idle{background:var(--t3)}
+.tb-dot.scanning{background:var(--acc);animation:blink 1s infinite}
+.tb-dot.done{background:var(--green)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.wc{display:flex;gap:3px;-webkit-app-region:no-drag}
+.wb{width:30px;height:30px;border-radius:5px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:background .15s;background:transparent;color:var(--t2)}
+.wb:hover{background:var(--bg3)}
+.wb.x:hover{background:var(--red);color:white}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sb{width:238px;background:var(--bg1);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:14px 0;flex-shrink:0}
+.sb-grp{padding:0 12px;margin-bottom:4px}
+.sb-lbl{font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;padding:10px 8px 5px}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;font-family:var(--fd);font-size:13px;font-weight:600;letter-spacing:.5px;color:var(--t2);transition:all .15s;position:relative;margin-bottom:1px}
+.ni:hover{background:var(--bg3);color:var(--t1)}
+.ni.on{background:rgba(79,142,247,.1);color:var(--acc)}
+.ni.on::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--acc);border-radius:2px;box-shadow:0 0 8px var(--acc)}
+.ni .ic{width:16px;text-align:center;font-size:13px;flex-shrink:0}
+.nbg{margin-left:auto;font-family:var(--fm);font-size:9px;padding:1px 6px;border-radius:10px;min-width:20px;text-align:center;background:var(--bg3);border:1px solid var(--bdb);color:var(--t2)}
+.nbg.r{background:rgba(240,79,106,.15);border-color:rgba(240,79,106,.3);color:var(--red)}
+.nbg.y{background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.3);color:var(--yellow)}
+.nbg.g{background:rgba(31,207,150,.15);border-color:rgba(31,207,150,.3);color:var(--green)}
+.sb-ft{margin-top:auto;padding:12px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px}
+.scanBtn{width:100%;padding:11px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;border-radius:var(--r);color:white;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 0 20px rgba(79,142,247,.3)}
+.scanBtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 32px rgba(79,142,247,.45)}
+.scanBtn:disabled{opacity:.4;cursor:not-allowed;transform:none !important}
+.exp-row{display:flex;gap:5px}
+.expBtn{flex:1;padding:6px 4px;border-radius:5px;border:1px solid var(--bdb);background:var(--bg2);color:var(--t2);font-family:var(--fm);font-size:9px;letter-spacing:.5px;cursor:pointer;transition:all .15s;text-align:center}
+.expBtn:hover{border-color:var(--acc);color:var(--acc)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+.mc{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.pg{display:none;flex-direction:column;height:100%}
+.pg.on{display:flex}
+
+/* ── SCANNING OVERLAY ─────────────────────────────────────── */
+.ov{position:absolute;inset:0;background:rgba(6,6,12,.93);backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:200}
+.ov.on{display:flex}
+.ov-title{font-family:var(--fd);font-size:26px;font-weight:700;letter-spacing:3px;color:var(--acc);text-transform:uppercase}
+.ov-rings{position:relative;width:88px;height:88px}
+.ring-a{width:88px;height:88px;border-radius:50%;border:2px solid var(--bd);border-top-color:var(--acc);border-right-color:var(--acc2);animation:spin .8s linear infinite;position:absolute}
+.ring-b{width:64px;height:64px;border-radius:50%;border:2px solid var(--bd);border-bottom-color:var(--green);animation:spin 1.3s linear infinite reverse;position:absolute;top:12px;left:12px}
+.ring-c{width:40px;height:40px;border-radius:50%;border:2px solid var(--bd);border-left-color:var(--orange);animation:spin 1.8s linear infinite;position:absolute;top:24px;left:24px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov-steps{display:flex;flex-direction:column;gap:9px;min-width:300px}
+.ostep{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:7px;background:var(--bg2);border:1px solid var(--bd);font-family:var(--fd);font-size:13px;font-weight:600;letter-spacing:.5px;transition:all .3s;color:var(--t3)}
+.ostep.active{border-color:var(--acc);background:rgba(79,142,247,.08);color:var(--acc)}
+.ostep.done{border-color:rgba(31,207,150,.3);background:rgba(31,207,150,.05);color:var(--green)}
+.ostep-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.ostep-sub{font-family:var(--fb);font-size:10px;margin-left:auto;color:var(--t3)}
+.ostep.active .ostep-sub{color:var(--acc);opacity:.8}
+.ostep.done  .ostep-sub{color:var(--green);opacity:.8}
+.ov-bar-wrap{width:300px;height:3px;background:var(--bd);border-radius:3px;overflow:hidden}
+.ov-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--green));border-radius:3px;transition:width .5s ease;box-shadow:0 0 10px var(--acc)}
+.ov-sub{font-family:var(--fm);font-size:10px;color:var(--t2);letter-spacing:1px}
+
+/* ── Page header ──────────────────────────────────────────── */
+.ph{padding:18px 24px 12px;border-bottom:1px solid var(--bd);flex-shrink:0;display:flex;align-items:center;gap:12px}
+.ph-t{font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:1px}
+.ph-s{font-size:11px;color:var(--t3);margin-top:2px}
+.ph-act{margin-left:auto;display:flex;gap:7px}
+.btn{padding:6px 13px;border-radius:5px;border:1px solid var(--bdb);background:var(--bg2);color:var(--t1);font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn:hover{background:var(--bg3);border-color:var(--acc);color:var(--acc)}
+.btn.p{background:rgba(79,142,247,.12);border-color:var(--acc);color:var(--acc)}
+.btn.p:hover{background:rgba(79,142,247,.22)}
+.btn.ai{background:linear-gradient(135deg,rgba(176,110,255,.15),rgba(79,142,247,.15));border-color:var(--purple);color:var(--purple)}
+.btn.ai:hover{background:linear-gradient(135deg,rgba(176,110,255,.25),rgba(79,142,247,.25))}
+
+/* ── Page body ────────────────────────────────────────────── */
+.pb{flex:1;overflow-y:auto;padding:16px 24px}
+.pb::-webkit-scrollbar{width:4px}
+.pb::-webkit-scrollbar-thumb{background:var(--bdb);border-radius:2px}
+
+/* ── Per-page loader ──────────────────────────────────────── */
+.ld{padding:50px;text-align:center;flex-direction:column;align-items:center;gap:14px;display:none;flex-shrink:0}
+.ld.on{display:flex !important}
+.sring{width:50px;height:50px;border-radius:50%;border:2px solid var(--bd);border-top-color:var(--acc);animation:spin .75s linear infinite}
+.ld-txt{font-family:var(--fm);font-size:10px;color:var(--t2);letter-spacing:1px}
+
+/* ── Stats / info ─────────────────────────────────────────── */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.sc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--acc)}
+.sc.red::before{background:var(--red)}.sc.yel::before{background:var(--yellow)}.sc.grn::before{background:var(--green)}.sc.pur::before{background:var(--purple)}
+.sc-lbl{font-family:var(--fm);font-size:9px;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;margin-bottom:7px}
+.sc-val{font-family:var(--fd);font-size:30px;font-weight:700;line-height:1}
+.sc-sub{font-size:11px;color:var(--t3);margin-top:4px}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.ip{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px}
+.ip-title{font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t2);text-transform:uppercase;margin-bottom:12px}
+.irow{display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);gap:8px}
+.irow:last-child{border-bottom:none}
+.ik{font-family:var(--fm);font-size:10px;color:var(--t3);width:130px;flex-shrink:0}
+.iv{font-family:var(--fm);font-size:11px;color:var(--t1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.rc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:13px 15px;display:flex;flex-direction:column;gap:5px}
+.rc-name{font-family:var(--fd);font-size:12px;font-weight:600;color:var(--t2);display:flex;align-items:center;gap:6px}
+.rc-val{font-family:var(--fm);font-size:12px;color:var(--t1)}
+.rc-req{font-size:10px;color:var(--t3)}
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge{padding:2px 8px;border-radius:3px;font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.badge.ok{background:rgba(31,207,150,.13);color:var(--green);border:1px solid rgba(31,207,150,.3)}
+.badge.ng{background:rgba(240,79,106,.13);color:var(--red);border:1px solid rgba(240,79,106,.3)}
+.badge.wn{background:rgba(240,192,64,.13);color:var(--yellow);border:1px solid rgba(240,192,64,.3)}
+.badge.unk{background:rgba(144,144,192,.08);color:var(--t3);border:1px solid var(--bd)}
+.badge.ai{background:linear-gradient(135deg,rgba(176,110,255,.2),rgba(79,142,247,.2));color:var(--purple);border:1px solid rgba(176,110,255,.35)}
+
+/* ── Filter bar ───────────────────────────────────────────── */
+.fbar{display:flex;gap:7px;align-items:center;flex-shrink:0;padding:12px 24px 0}
+.si{flex:1;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;padding:7px 12px;color:var(--t1);font-family:var(--fb);font-size:12px;outline:none;transition:border-color .15s}
+.si:focus{border-color:var(--acc)}.si::placeholder{color:var(--t3)}
+.fc{padding:5px 11px;border-radius:4px;border:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-family:var(--fm);font-size:9px;cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.fc:hover{border-color:var(--bdb);color:var(--t1)}
+.fc.on{background:rgba(79,142,247,.08);border-color:var(--acc);color:var(--acc)}
+.fc.r.on{background:rgba(240,79,106,.08);border-color:var(--red);color:var(--red)}
+.fc.y.on{background:rgba(240,192,64,.08);border-color:var(--yellow);color:var(--yellow)}
+.fc.g.on{background:rgba(31,207,150,.08);border-color:var(--green);color:var(--green)}
+
+/* ── Table ────────────────────────────────────────────────── */
+.tc{overflow-y:auto;border:1px solid var(--bd);border-radius:var(--r);display:none}
+.tc.on{display:block}
+.tc::-webkit-scrollbar{width:4px}
+.tc::-webkit-scrollbar-thumb{background:var(--bdb);border-radius:2px}
+.dt{width:100%;border-collapse:collapse}
+.dt th{text-align:left;padding:8px 12px;font-family:var(--fm);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--bd);background:var(--bg1);position:sticky;top:0;z-index:1}
+.dt td{padding:8px 12px;border-bottom:1px solid var(--bd);font-size:12px;vertical-align:middle}
+.dt tr:last-child td{border-bottom:none}
+.dt tbody tr:hover{background:rgba(255,255,255,.018)}
+.nm{font-weight:500;color:var(--t1);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm{font-family:var(--fm);font-size:10px;color:var(--t3)}
+.rm{font-size:11px;color:var(--t2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
+.sdot.compatible{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sdot.warning{background:var(--yellow);box-shadow:0 0 5px var(--yellow)}
+.sdot.incompatible{background:var(--red);box-shadow:0 0 5px var(--red)}
+.sdot.unknown{background:var(--t3)}
+.aBtn{padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--t3);font-family:var(--fm);font-size:9px;cursor:pointer;transition:all .15s}
+.aBtn:hover{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,.08)}
+.aBtn.ai-btn{border-color:rgba(176,110,255,.3);color:var(--purple)}
+.aBtn.ai-btn:hover{border-color:var(--purple);background:rgba(176,110,255,.1)}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:10px;color:var(--t3)}
+.empty-ic{font-size:36px;opacity:.2}
+.empty-t{font-family:var(--fd);font-size:15px;font-weight:600;letter-spacing:1px}
+.empty-s{font-size:11px}
+
+/* ── Drop zone ────────────────────────────────────────────── */
+.dz{border:2px dashed var(--bdb);border-radius:var(--r);padding:40px;text-align:center;transition:all .2s;cursor:pointer;margin-bottom:16px;background:var(--bg2)}
+.dz:hover{border-color:var(--acc);background:rgba(79,142,247,.04)}
+.dz-ic{font-size:28px;margin-bottom:8px;opacity:.35}
+.dz-t{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--t2)}
+.dz-s{font-size:11px;color:var(--t3);margin-top:3px}
+
+/* ── AI Deep Check Modal ──────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(6,6,12,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:500}
+.modal-bg.on{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bdb);border-radius:12px;width:700px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 80px rgba(79,142,247,.2)}
+.modal-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:10px;flex-shrink:0}
+.modal-title{font-family:var(--fd);font-size:17px;font-weight:700;letter-spacing:1px}
+.modal-sub{font-size:11px;color:var(--t3);margin-top:3px}
+.modal-close{margin-left:auto;background:transparent;border:none;color:var(--t2);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;transition:background .15s;flex-shrink:0}
+.modal-close:hover{background:var(--bg3);color:var(--t1)}
+.modal-body{overflow-y:auto;padding:18px 20px;flex:1}
+.modal-body::-webkit-scrollbar{width:4px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--bdb);border-radius:2px}
+
+/* AI steps inside modal */
+.ai-step{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:6px;background:var(--bg3);border:1px solid var(--bd);margin-bottom:10px;transition:all .3s}
+.ai-step.active{border-color:var(--purple);background:rgba(176,110,255,.06)}
+.ai-step.done{border-color:rgba(31,207,150,.25);background:rgba(31,207,150,.04)}
+.ai-step.done .ai-step-ic{color:var(--green)}
+.ai-step-ic{font-size:14px;width:18px;flex-shrink:0;margin-top:1px}
+.ai-step-body{flex:1;min-width:0}
+.ai-step-title{font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--t2);margin-bottom:4px}
+.ai-step.active .ai-step-title{color:var(--purple)}
+.ai-step.done  .ai-step-title{color:var(--green)}
+.ai-step-snips{font-size:11px;color:var(--t2);line-height:1.55}
+.ai-snip{padding:3px 0;border-bottom:1px solid var(--bd);opacity:.8}
+.ai-snip:last-child{border-bottom:none;padding-bottom:0}
+
+/* Verdict panel */
+.verdict-panel{border-radius:8px;padding:16px 20px;margin-top:16px;border:1px solid var(--bdb)}
+.verdict-panel.ok{border-color:rgba(31,207,150,.4);background:rgba(31,207,150,.06)}
+.verdict-panel.wn{border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.06)}
+.verdict-panel.ng{border-color:rgba(240,79,106,.4);background:rgba(240,79,106,.06)}
+.verdict-panel.unk{border-color:var(--bd);background:var(--bg3)}
+.verdict-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.verdict-icon{font-size:28px}
+.verdict-label{font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:1px}
+.verdict-conf{font-family:var(--fm);font-size:9px;letter-spacing:1px;color:var(--t3)}
+.verdict-summary{font-size:12px;color:var(--t2);line-height:1.6}
+.verdict-basis{font-family:var(--fm);font-size:9px;color:var(--t3);margin-top:6px}
+
+/* Source links */
+.src-link{display:inline-flex;align-items:center;gap:5px;font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:3px;border:1px solid var(--bdb);color:var(--t3);cursor:pointer;transition:all .15s;text-decoration:none;margin-right:6px;margin-top:4px}
+.src-link:hover{border-color:var(--acc);color:var(--acc)}
+
+/* ── Toast ────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--bdb);border-radius:6px;padding:10px 16px;font-family:var(--fm);font-size:11px;color:var(--t1);z-index:999;opacity:0;transform:translateX(12px);transition:all .25s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- ── Titlebar ──────────────────────────────────────────── -->
+<div class="tb">
+  <div class="tb-logo">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <div>
+      <div class="tb-abbr"><span>W</span>URS</div>
+    </div>
+    <div class="tb-full">Windows Upgrade Requirements Scanner</div>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-stat">
+    <span class="tb-dot idle" id="tb-dot"></span>
+    <span id="tb-txt">準備完了</span>
+  </div>
+  <div class="wc">
+    <button class="wb" onclick="window.electronAPI?.minimize()">─</button>
+    <button class="wb" onclick="window.electronAPI?.maximize()">□</button>
+    <button class="wb x" onclick="window.electronAPI?.close()">✕</button>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── Sidebar ───────────────────────────────────────────── -->
+<div class="sb">
+  <div class="sb-grp">
+    <div class="sb-lbl">概要</div>
+    <div class="ni on" data-pg="dashboard" onclick="nav('dashboard')"><span class="ic">◈</span>ダッシュボード</div>
+    <div class="ni" data-pg="system" onclick="nav('system')"><span class="ic">◉</span>システム要件</div>
+  </div>
+  <div class="sb-grp">
+    <div class="sb-lbl">スキャン</div>
+    <div class="ni" data-pg="apps" onclick="nav('apps')"><span class="ic">◫</span>インストール済みアプリ<span class="nbg" id="b-apps">—</span></div>
+    <div class="ni" data-pg="drivers" onclick="nav('drivers')"><span class="ic">⚙</span>ドライバー<span class="nbg" id="b-drv">—</span></div>
+    <div class="ni" data-pg="files" onclick="nav('files')"><span class="ic">◧</span>ファイル/フォルダ<span class="nbg" id="b-files">—</span></div>
+    <div class="ni" data-pg="zip" onclick="nav('zip')"><span class="ic">🗜</span>ZIPツール解析</div>
+  </div>
+  <div class="sb-grp">
+    <div class="sb-lbl">オンラインチェック</div>
+    <div class="ni" data-pg="search" onclick="nav('search')"><span class="ic">🌐</span>互換性検索</div>
+    <div class="ni" data-pg="github" onclick="nav('github')"><span class="ic">⬡</span>GitHubリリース確認</div>
+  </div>
+  <div class="sb-ft">
+    <button class="scanBtn" id="scanAllBtn" onclick="fullScan()">▶ フルスキャン</button>
+    <div class="exp-row">
+      <button class="expBtn" onclick="doExport('json')">JSON/CSV</button>
+      <button class="expBtn" onclick="doExport('html')">HTML</button>
+      <button class="expBtn" onclick="doExport('pdf')">PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ──────────────────────────────────────────────── -->
+<div class="mc">
+
+<!-- Scanning overlay -->
+<div class="ov" id="ov">
+  <div class="ov-title">W U R S  スキャン中</div>
+  <div class="ov-rings"><div class="ring-a"></div><div class="ring-b"></div><div class="ring-c"></div></div>
+  <div class="ov-steps">
+    <div class="ostep" id="os-sys"><span class="ostep-ic">◉</span>システム要件チェック<span class="ostep-sub" id="os-sys-sub"></span></div>
+    <div class="ostep" id="os-app"><span class="ostep-ic">◫</span>インストール済みアプリ<span class="ostep-sub" id="os-app-sub"></span></div>
+    <div class="ostep" id="os-drv"><span class="ostep-ic">⚙</span>ドライバースキャン<span class="ostep-sub" id="os-drv-sub"></span></div>
+  </div>
+  <div class="ov-bar-wrap"><div class="ov-bar" id="ov-bar"></div></div>
+  <div class="ov-sub" id="ov-sub">スキャンを開始しています...</div>
+</div>
+
+<!-- AI Deep Check Modal -->
+<div class="modal-bg" id="ai-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title" id="ai-modal-title">AIディープ互換チェック</div>
+        <div class="modal-sub">Google検索 + Microsoft Support + GitHub Issues + 内部DB を並列調査</div>
+      </div>
+      <button class="modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div class="modal-body" id="ai-modal-body">
+      <div style="text-align:center;padding:40px;color:var(--t3)">
+        <div class="sring" style="margin:0 auto 14px"></div>
+        <div style="font-family:var(--fm);font-size:10px;letter-spacing:1px">複数ソースを並列調査中...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Dashboard ──────────────────────────────────────── -->
+<div class="pg on" id="pg-dashboard">
+  <div class="ph">
+    <div><div class="ph-t">ダッシュボード</div><div class="ph-s">Windows 11 移行互換性サマリー — Windows Upgrade Requirements Scanner</div></div>
+    <div class="ph-act">
+      <button class="btn" onclick="doExport('html')">📄 HTML</button>
+      <button class="btn" onclick="doExport('pdf')">🖨 PDF</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="sgrid">
+      <div class="sc red"><div class="sc-lbl">非互換</div><div class="sc-val" id="d-inc">—</div><div class="sc-sub">要対応</div></div>
+      <div class="sc yel"><div class="sc-lbl">要確認</div><div class="sc-val" id="d-warn">—</div><div class="sc-sub">警告</div></div>
+      <div class="sc grn"><div class="sc-lbl">互換あり</div><div class="sc-val" id="d-comp">—</div><div class="sc-sub">問題なし</div></div>
+      <div class="sc pur"><div class="sc-lbl">総スキャン数</div><div class="sc-val" id="d-total">—</div><div class="sc-sub">アイテム</div></div>
+    </div>
+    <div class="igrid">
+      <div class="ip"><div class="ip-title">💻 システム概要</div><div id="d-sysinfo"><div style="color:var(--t3);font-size:11px;padding:8px">フルスキャンで取得</div></div></div>
+      <div class="ip"><div class="ip-title">🔴 要対応アイテム</div><div id="d-issues"><div style="color:var(--t3);font-size:11px;padding:8px">フルスキャン後に表示</div></div></div>
+    </div>
+    <div class="igrid">
+      <div class="ip"><div class="ip-title">🔧 ドライバー要対応</div><div id="d-drvissues"><div style="color:var(--t3);font-size:11px;padding:8px">フルスキャン後に表示</div></div></div>
+      <div class="ip"><div class="ip-title">📊 カテゴリ別</div><div id="d-cats"><div style="color:var(--t3);font-size:11px;padding:8px">フルスキャン後に表示</div></div></div>
+    </div>
+    <div style="background:rgba(79,142,247,.07);border:1px solid rgba(79,142,247,.2);border-radius:var(--r);padding:14px 20px;display:flex;align-items:center;gap:14px">
+      <span style="font-size:22px">▶</span>
+      <div>
+        <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--acc)">フルスキャンを開始してください</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">左サイドバーの「フルスキャン」ボタン — システム・アプリ・ドライバーを一括スキャンします</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── System ──────────────────────────────────────────── -->
+<div class="pg" id="pg-system">
+  <div class="ph">
+    <div><div class="ph-t">システム要件チェック</div><div class="ph-s">Windows 11 最小要件との比較</div></div>
+    <div class="ph-act"><button class="btn p" onclick="scanSystem()">↺ 再チェック</button></div>
+  </div>
+  <div class="pb">
+    <div class="ld" id="ld-system"><div class="sring"></div><div class="ld-txt">システム情報取得中...</div></div>
+    <div id="sys-content" style="display:none">
+      <div class="rg" id="req-grid"></div>
+      <div class="igrid">
+        <div class="ip"><div class="ip-title">⚙ ハードウェア詳細</div><div id="hw-detail"></div></div>
+        <div class="ip"><div class="ip-title">✅ Win11 互換判定</div><div id="win11-verdict"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Apps ────────────────────────────────────────────── -->
+<div class="pg" id="pg-apps" style="overflow:hidden">
+  <div class="ph">
+    <div><div class="ph-t">インストール済みアプリ</div><div class="ph-s">レジストリから検出したアプリケーション一覧</div></div>
+    <div class="ph-act"><button class="btn p" onclick="scanApps()">↺ スキャン</button></div>
+  </div>
+  <div class="fbar">
+    <input class="si" type="text" placeholder="🔍 アプリ名・発行元で検索..." id="app-q" oninput="renderApps()">
+    <span class="fc on" onclick="setF('all',this,'apps')">全て</span>
+    <span class="fc r" onclick="setF('incompatible',this,'apps')">非互換</span>
+    <span class="fc y" onclick="setF('warning',this,'apps')">警告</span>
+    <span class="fc g" onclick="setF('compatible',this,'apps')">互換</span>
+  </div>
+  <div class="ld" id="ld-apps" style="flex-shrink:0"><div class="sring"></div><div class="ld-txt" id="ld-apps-txt">レジストリスキャン中...</div></div>
+  <div class="tc" id="apps-tc" style="margin:10px 24px;flex:1">
+    <table class="dt"><thead><tr><th>アプリ名</th><th>バージョン</th><th>発行元</th><th>互換性</th><th>詳細</th><th>操作</th></tr></thead>
+    <tbody id="apps-tb"></tbody></table>
+  </div>
+  <div class="empty" id="apps-empty"><div class="empty-ic">◫</div><div class="empty-t">スキャン未実行</div><div class="empty-s">スキャンボタンまたはフルスキャンで検出します</div></div>
+</div>
+
+<!-- ─── Drivers ──────────────────────────────────────────── -->
+<div class="pg" id="pg-drivers" style="overflow:hidden">
+  <div class="ph">
+    <div><div class="ph-t">ドライバー スキャン</div><div class="ph-s">インストール済みドライバーの互換性チェック</div></div>
+    <div class="ph-act"><button class="btn p" onclick="scanDrivers()">↺ スキャン</button></div>
+  </div>
+  <div class="fbar">
+    <input class="si" type="text" placeholder="🔍 ドライバー名・メーカーで検索..." id="drv-q" oninput="renderDrivers()">
+    <span class="fc on" onclick="setF('all',this,'drv')">全て</span>
+    <span class="fc r" onclick="setF('incompatible',this,'drv')">非互換</span>
+    <span class="fc y" onclick="setF('warning',this,'drv')">警告</span>
+    <span class="fc g" onclick="setF('compatible',this,'drv')">互換</span>
+  </div>
+  <div class="ld" id="ld-drv" style="flex-shrink:0"><div class="sring"></div><div class="ld-txt" id="ld-drv-txt">ドライバースキャン中...</div></div>
+  <div class="tc" id="drv-tc" style="margin:10px 24px;flex:1">
+    <table class="dt"><thead><tr><th>ドライバー名</th><th>バージョン</th><th>日付</th><th>メーカー</th><th>クラス</th><th>署名</th><th>互換性</th><th>詳細</th></tr></thead>
+    <tbody id="drv-tb"></tbody></table>
+  </div>
+  <div class="empty" id="drv-empty"><div class="empty-ic">⚙</div><div class="empty-t">スキャン未実行</div><div class="empty-s">スキャンボタンまたはフルスキャンで検出します</div></div>
+</div>
+
+<!-- ─── Files ────────────────────────────────────────────── -->
+<div class="pg" id="pg-files" style="overflow:hidden">
+  <div class="ph">
+    <div><div class="ph-t">ファイル / フォルダ スキャン</div><div class="ph-s">実行可能ファイルの互換性チェック</div></div>
+    <div class="ph-act"><button class="btn p" onclick="pickDir()">📁 フォルダ選択</button></div>
+  </div>
+  <!-- ★ ファイルスキャン専用フィルターバー ★ -->
+  <div class="fbar" id="files-fbar" style="display:none">
+    <input class="si" type="text" placeholder="🔍 ファイル名・拡張子で検索..." id="files-q" oninput="renderFiles()">
+    <span class="fc on" onclick="setF('all',this,'files')">全て</span>
+    <span class="fc r" onclick="setF('incompatible',this,'files')">非互換</span>
+    <span class="fc y" onclick="setF('warning',this,'files')">警告</span>
+    <span class="fc g" onclick="setF('compatible',this,'files')">互換</span>
+  </div>
+  <div id="files-path" style="font-family:var(--fm);font-size:10px;color:var(--t3);padding:6px 24px 0;display:none;flex-shrink:0"></div>
+  <div class="ld" id="ld-files" style="flex-shrink:0"><div class="sring"></div><div class="ld-txt">ファイルスキャン中...</div></div>
+  <div class="tc" id="files-tc" style="margin:10px 24px;flex:1">
+    <table class="dt"><thead><tr><th>ファイル名</th><th>種類</th><th>サイズ</th><th>互換性</th><th>詳細</th><th>操作</th></tr></thead>
+    <tbody id="files-tb"></tbody></table>
+  </div>
+  <div class="empty" id="files-empty"><div class="empty-ic">◧</div><div class="empty-t">フォルダ未選択</div><div class="empty-s">スキャンするフォルダを選択してください</div></div>
+</div>
+
+<!-- ─── ZIP ──────────────────────────────────────────────── -->
+<div class="pg" id="pg-zip">
+  <div class="ph"><div><div class="ph-t">ZIP ツール解析</div><div class="ph-s">配布ZIPファイル内の実行ファイル互換性チェック</div></div></div>
+  <div class="pb">
+    <div class="dz" onclick="pickZip()">
+      <div class="dz-ic">🗜</div>
+      <div class="dz-t">ZIPファイルをドロップ、またはクリックして選択</div>
+      <div class="dz-s">.zip ファイルのみ対応 — 内部の実行ファイルを全てチェック</div>
+    </div>
+    <div class="ld" id="ld-zip"><div class="sring"></div><div class="ld-txt">ZIP解析中...</div></div>
+    <div id="zip-result" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ─── Search ───────────────────────────────────────────── -->
+<div class="pg" id="pg-search">
+  <div class="ph"><div><div class="ph-t">互換性 ネット検索</div><div class="ph-s">Google検索でWindows 11互換情報を取得・分析</div></div></div>
+  <div class="pb">
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <input class="si" type="text" placeholder="アプリ名を入力 (例: DaVinci Resolve)" id="net-q" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="btn p" onclick="doSearch()">🔍 検索</button>
+      <button class="btn" onclick="checkKnown()">📋 DB照合</button>
+      <button class="btn ai" onclick="openAiModal(document.getElementById('net-q').value,'')">🤖 AIディープチェック</button>
+    </div>
+    <div class="ld" id="ld-search"><div class="sring"></div><div class="ld-txt">インターネット検索中...</div></div>
+    <div id="search-result" style="display:none"></div>
+    <div style="margin-top:20px">
+      <div style="font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">検索履歴</div>
+      <div id="search-hist"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── GitHub ───────────────────────────────────────────── -->
+<div class="pg" id="pg-github">
+  <div class="ph"><div><div class="ph-t">GitHub リリース確認</div><div class="ph-s">GitHubで配布されているツールのWin11互換性を確認</div></div></div>
+  <div class="pb">
+    <div style="display:flex;gap:7px;margin-bottom:8px;align-items:center">
+      <span style="font-family:var(--fm);font-size:10px;color:var(--t3);flex-shrink:0">github.com/</span>
+      <input class="si" type="text" id="gh-owner" placeholder="owner" style="flex:1">
+      <span style="font-family:var(--fm);font-size:10px;color:var(--t3)">/</span>
+      <input class="si" type="text" id="gh-repo" placeholder="repo" style="flex:2">
+      <button class="btn p" onclick="checkGithub()">⬡ チェック</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px" id="gh-quick"></div>
+    <div class="ld" id="ld-gh"><div class="sring"></div><div class="ld-txt">GitHub API 問い合わせ中...</div></div>
+    <div id="gh-result" style="display:none"></div>
+  </div>
+</div>
+
+</div><!-- /mc -->
+</div><!-- /layout -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const S = { si:null, apps:[], drivers:[], files:[], searchHist:[], fApps:'all', fDrv:'all', fFiles:'all' };
+const api = window.electronAPI || null;
+
+// Listen for progress pings from main process during long PS runs
+if (api?.onScanProgress) {
+  api.onScanProgress(msg => {
+    const sub = document.getElementById('ov-sub');
+    if (sub && document.getElementById('ov').classList.contains('on')) sub.textContent = msg;
+  });
+}
+
+// ─── Nav ────────────────────────────────────────────────────────────────────
+function nav(p) {
+  document.querySelectorAll('.pg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(e => e.classList.remove('on'));
+  document.getElementById('pg-'+p).classList.add('on');
+  const ni = document.querySelector(`.ni[data-pg="${p}"]`);
+  if (ni) ni.classList.add('on');
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let _tt;
+function toast(msg, dur=2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('on'), dur);
+}
+
+// ─── Status bar ──────────────────────────────────────────────────────────────
+function setStatus(txt, st='idle') {
+  document.getElementById('tb-txt').textContent = txt;
+  document.getElementById('tb-dot').className = 'tb-dot ' + st;
+}
+
+// ─── Loader helpers ──────────────────────────────────────────────────────────
+function ldOn(id)    { const e=document.getElementById(id); if(e){e.style.removeProperty('display');e.classList.add('on');} }
+function ldOff(id)   { const e=document.getElementById(id); if(e){e.style.display='none';e.classList.remove('on');} }
+function tcOn(id)    { const e=document.getElementById(id); if(e){e.style.removeProperty('display');e.classList.add('on');} }
+function tcOff(id)   { const e=document.getElementById(id); if(e){e.style.setProperty('display','none','important');e.classList.remove('on');} }
+function elOn(id)    { const e=document.getElementById(id); if(e) e.style.removeProperty('display'); }
+function elOff(id)   { const e=document.getElementById(id); if(e) e.style.display='none'; }
+
+// ─── Overlay helpers ─────────────────────────────────────────────────────────
+function ovStep(id, st, sub='') {
+  const e = document.getElementById('os-'+id);
+  if (!e) return;
+  e.className = 'ostep ' + st;
+  const icons = { sys:'◉', app:'◫', drv:'⚙' };
+  const ic = e.querySelector('.ostep-ic');
+  ic.textContent = st==='active' ? '⟳' : st==='done' ? '✓' : (icons[id]||'○');
+  const subEl = document.getElementById('os-'+id+'-sub');
+  if (subEl) subEl.textContent = sub;
+}
+function ovBar(pct) { document.getElementById('ov-bar').style.width = pct+'%'; }
+function ovSub(txt) { document.getElementById('ov-sub').textContent = txt; }
+
+// ─── FULL SCAN ───────────────────────────────────────────────────────────────
+async function fullScan() {
+  const btn = document.getElementById('scanAllBtn');
+  btn.disabled = true;
+  setStatus('スキャン中...', 'scanning');
+  document.getElementById('ov').classList.add('on');
+  ovStep('sys','waiting'); ovStep('app','waiting'); ovStep('drv','waiting');
+  ovBar(0); ovSub('スキャンを開始しています...');
+
+  try {
+    ovStep('sys','active','取得中...'); ovSub('システム情報を取得中...');
+    ovBar(5);
+    await scanSystem(true);
+    ovStep('sys','done', S.si ? (S.si.cpuModel||'').substring(0,18)+'…' : '完了');
+    ovBar(33);
+
+    ovStep('app','active','スキャン中...'); ovSub('インストール済みアプリをスキャン中...');
+    await scanApps(true);
+    ovStep('app','done', S.apps.length + '件 検出');
+    ovBar(66);
+
+    ovStep('drv','active','スキャン中...'); ovSub('ドライバーをスキャン中...');
+    await scanDrivers(true);
+    ovStep('drv','done', S.drivers.length + '件 検出');
+    ovBar(100);
+
+    ovSub('スキャン完了！');
+    await new Promise(r => setTimeout(r, 700));
+    updateDash();
+  } finally {
+    document.getElementById('ov').classList.remove('on');
+    btn.disabled = false;
+    setStatus('スキャン完了', 'done');
+    nav('dashboard');
+    toast('✓ フルスキャン完了 — ' + [...S.apps, ...S.drivers].length + '件スキャン');
+  }
+}
+
+// ─── System ──────────────────────────────────────────────────────────────────
+async function scanSystem(silent=false) {
+  if (!silent) nav('system');
+  ldOn('ld-system'); elOff('sys-content');
+  const info = api ? await api.getSystemInfo() : demoSI();
+  S.si = info;
+  renderSystem(info);
+  ldOff('ld-system'); elOn('sys-content');
+}
+function demoSI() {
+  return { platform:'win32',arch:'x64',osVersion:'10.0.19045',cpuModel:'Intel Core i7-10700K @ 3.80GHz',cpuCores:8,totalMemGB:'16.0',freeMemGB:'8.2',hostname:'DESKTOP-WIN10',username:'user',uptime:'12時間',scanTime:new Date().toLocaleString('ja-JP'),tpm:true,secureBoot:false,diskType:'SSD',diskGB:'512',gpu:'NVIDIA GeForce RTX 3070',directx:'12',cpuGeneration:{vendor:'Intel',gen:10,supported:true} };
+}
+function renderSystem(si) {
+  const reqs=[
+    ['CPU世代', si.cpuModel?(si.cpuModel+'').substring(0,38):'N/A', si.cpuGeneration?.supported, '8世代+(Intel)/Ryzen 2000+(AMD)'],
+    ['RAM', si.totalMemGB+' GB', parseFloat(si.totalMemGB)>=4, '4 GB以上'],
+    ['アーキテクチャ', si.arch, si.arch==='x64', '64-bit'],
+    ['TPM 2.0', si.tpm===true?'有効':si.tpm===false?'無効':'未検出', si.tpm, 'TPM 2.0必須'],
+    ['セキュアブート', si.secureBoot===true?'有効':si.secureBoot===false?'無効':'未検出', si.secureBoot, 'UEFI+セキュアブート推奨'],
+    ['ストレージ', (si.diskGB?si.diskGB+' GB ':'')+(si.diskType||'N/A'), true, '64 GB以上'],
+  ];
+  document.getElementById('req-grid').innerHTML = reqs.map(([n,v,ok,req])=>{
+    const cls=ok===true?'ok':ok===false?'ng':'wn', lbl=ok===true?'OK':ok===false?'NG':'?';
+    return `<div class="rc"><div class="rc-name"><span class="badge ${cls}">${lbl}</span>${E(n)}</div><div class="rc-val">${E(v)}</div><div class="rc-req">要件: ${E(req)}</div></div>`;
+  }).join('');
+  document.getElementById('hw-detail').innerHTML=[
+    ['CPU',si.cpuModel],['CPUコア',si.cpuCores],['メモリ(合計)',si.totalMemGB+' GB'],['メモリ(空き)',si.freeMemGB+' GB'],
+    ['GPU',si.gpu||'—'],['DirectX',si.directx||'12'],['OSバージョン',si.osVersion],['ホスト名',si.hostname],['ユーザー',si.username],['稼働時間',si.uptime],
+  ].map(([k,v])=>`<div class="irow"><span class="ik">${k}</span><span class="iv">${E(v||'—')}</span></div>`).join('');
+  const fails=reqs.filter(r=>r[2]===false).length;
+  document.getElementById('win11-verdict').innerHTML = fails===0
+    ? `<div style="text-align:center;padding:20px"><div style="font-size:36px;margin-bottom:8px">✅</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--green)">Windows 11 対応可能</div><div style="font-size:11px;color:var(--t3);margin-top:6px">全${reqs.length}要件クリア</div></div>`
+    : `<div style="text-align:center;padding:20px"><div style="font-size:36px;margin-bottom:8px">⚠️</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--red)">要件未達: ${fails}件</div><div style="font-size:11px;color:var(--t3);margin-top:6px">ハードウェアのアップグレードが必要です</div></div>`;
+  document.getElementById('d-sysinfo').innerHTML=[
+    ['CPU',(si.cpuModel||'').substring(0,32)+(si.cpuModel?.length>32?'…':'')],
+    ['RAM',si.totalMemGB+' GB'],['OS','Windows '+si.osVersion],
+    ['TPM',si.tpm===true?`<span style="color:var(--green)">✓ 有効</span>`:`<span style="color:var(--red)">✗ 無効/未検出</span>`],
+    ['セキュアブート',si.secureBoot===true?`<span style="color:var(--green)">✓ 有効</span>`:`<span style="color:var(--red)">✗ 無効/未検出</span>`],
+  ].map(([k,v])=>`<div class="irow"><span class="ik">${k}</span><span class="iv" style="font-size:11px">${v}</span></div>`).join('');
+}
+
+// ─── Apps ────────────────────────────────────────────────────────────────────
+async function scanApps(silent=false) {
+  if (!silent) nav('apps');
+  ldOn('ld-apps'); tcOff('apps-tc'); elOff('apps-empty');
+  S.apps = api ? await api.scanInstalledApps() : demoApps();
+  renderApps(); updateBadge('b-apps', S.apps);
+  ldOff('ld-apps');
+  S.apps.length>0 ? tcOn('apps-tc') : elOn('apps-empty');
+}
+function demoApps(){return[
+  {name:'Google Chrome',version:'120.0',publisher:'Google LLC',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Internet Explorer 11',version:'11.0.9',publisher:'Microsoft',compatibility:{status:'incompatible',reason:'Windows 11ではIEが完全削除されました'}},
+  {name:'VirtualBox 5.2',version:'5.2.44',publisher:'Oracle',compatibility:{status:'incompatible',reason:'VirtualBox 5.x はWin11非対応 → 最新版へ更新'}},
+  {name:'Kaspersky Security',version:'21.3',publisher:'Kaspersky',compatibility:{status:'warning',reason:'Win11対応版か公式サイトで確認してください'}},
+  {name:'Visual Studio Code',version:'1.85.1',publisher:'Microsoft',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Adobe Photoshop 2024',version:'25.0',publisher:'Adobe',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Realtek Audio Driver',version:'6.0.92',publisher:'Realtek',compatibility:{status:'warning',reason:'Win11用ドライバーへ更新を推奨'}},
+  {name:'QuickTime Player',version:'7.79',publisher:'Apple',compatibility:{status:'incompatible',reason:'QuickTimeはWindows非推奨・脆弱性あり'}},
+  {name:'7-Zip 23',version:'23.01',publisher:'Igor Pavlov',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'DAEMON Tools Lite 4.0',version:'4.0.0',publisher:'DT Soft',compatibility:{status:'incompatible',reason:'旧DAEMON Toolsはドライバー非互換'}},
+  {name:'NVIDIA GeForce Driver',version:'536.99',publisher:'NVIDIA',compatibility:{status:'warning',reason:'Win11用最新ドライバーへ更新を推奨'}},
+  {name:'Mozilla Firefox',version:'121.0',publisher:'Mozilla',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Microsoft Office 2010',version:'14.0.72',publisher:'Microsoft',compatibility:{status:'incompatible',reason:'Office 2010はサポート終了(2020年)'}},
+  {name:'Blender',version:'4.0.1',publisher:'Blender Foundation',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Steam',version:'1.0',publisher:'Valve',compatibility:{status:'compatible',reason:'既知の問題なし'}},
+];}
+function renderApps(){
+  const q=(document.getElementById('app-q').value||'').toLowerCase(), f=S.fApps;
+  const rows=S.apps.filter(a=>(!q||(a.name.toLowerCase().includes(q)||(a.publisher||'').toLowerCase().includes(q)))&&(f==='all'||a.compatibility.status===f)).map(a=>{
+    const [lbl,cls]=sLabel(a.compatibility.status);
+    return `<tr><td class="nm">${E(a.name)}</td><td class="vm">${E(a.version||'—')}</td><td class="vm">${E(a.publisher||'—')}</td>
+      <td><span class="sdot ${a.compatibility.status}"></span><span class="badge ${cls}">${lbl}</span></td>
+      <td class="rm">${E(a.compatibility.reason||'')}</td>
+      <td style="display:flex;gap:4px">
+        <button class="aBtn" onclick="searchApp(${JSON.stringify(a.name)})">🔍</button>
+        <button class="aBtn ai-btn" onclick="openAiModal(${JSON.stringify(a.name)},${JSON.stringify(a.version||'')})">🤖 AI</button>
+      </td></tr>`;
+  }).join('');
+  document.getElementById('apps-tb').innerHTML = rows||noRows(6);
+}
+
+// ─── Drivers ─────────────────────────────────────────────────────────────────
+async function scanDrivers(silent=false){
+  if(!silent) nav('drivers');
+  ldOn('ld-drv'); tcOff('drv-tc'); elOff('drv-empty');
+  S.drivers = api ? await api.scanDrivers() : demoDrv();
+  renderDrivers(); updateBadge('b-drv', S.drivers);
+  ldOff('ld-drv');
+  S.drivers.length>0 ? tcOn('drv-tc') : elOn('drv-empty');
+}
+function demoDrv(){return[
+  {name:'NVIDIA GeForce RTX 3080',version:'536.99',date:'2023/08/15',manufacturer:'NVIDIA',class:'Display',signed:true,compatibility:{status:'warning',reason:'ディスプレイドライバー — Win11対応版に更新を推奨'}},
+  {name:'Realtek HD Audio',version:'6.0.9260.1',date:'2023/05/10',manufacturer:'Realtek',class:'MEDIA',signed:true,compatibility:{status:'warning',reason:'オーディオドライバー — Win11付属ドライバーで確認を'}},
+  {name:'Intel Wi-Fi 6 AX200',version:'22.200.0.4',date:'2023/07/01',manufacturer:'Intel',class:'Net',signed:true,compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'USB Root Hub (USB 3.0)',version:'10.0.19041',date:'2023/01/01',manufacturer:'Microsoft',class:'USB',signed:true,compatibility:{status:'compatible',reason:'既知の問題なし'}},
+  {name:'Canon iP7200 Printer',version:'6.71.0.0',date:'2016/04/15',manufacturer:'Canon',class:'Printer',signed:true,compatibility:{status:'incompatible',reason:'古いドライバー(2016年) — Win11非対応の可能性が高い'}},
+  {name:'Intel HD Graphics 4000',version:'9.17.10.4229',date:'2014/11/03',manufacturer:'Intel',class:'Display',signed:true,compatibility:{status:'incompatible',reason:'古いドライバー(2014年) — Win11非対応の可能性が高い'}},
+  {name:'Intel Bluetooth',version:'22.50.0.3',date:'2022/11/20',manufacturer:'Intel',class:'Bluetooth',signed:true,compatibility:{status:'warning',reason:'Bluetoothドライバー — Win11用最新版を推奨'}},
+];}
+function renderDrivers(){
+  const q=(document.getElementById('drv-q').value||'').toLowerCase(), f=S.fDrv;
+  const rows=S.drivers.filter(d=>(!q||(d.name.toLowerCase().includes(q)||(d.manufacturer||'').toLowerCase().includes(q)))&&(f==='all'||d.compatibility.status===f)).map(d=>{
+    const [lbl,cls]=sLabel(d.compatibility.status);
+    const sig=d.signed?'<span class="badge ok" style="font-size:9px">署名済</span>':'<span class="badge ng" style="font-size:9px">未署名</span>';
+    return `<tr><td class="nm">${E(d.name)}</td><td class="vm">${E(d.version||'—')}</td><td class="vm">${E(d.date||'—')}</td><td class="vm">${E(d.manufacturer||'—')}</td>
+      <td><span style="font-family:var(--fm);font-size:9px;background:var(--bg3);padding:1px 5px;border-radius:2px;border:1px solid var(--bd)">${E(d.class||'—')}</span></td>
+      <td>${sig}</td><td><span class="sdot ${d.compatibility.status}"></span><span class="badge ${cls}">${lbl}</span></td>
+      <td class="rm">${E(d.compatibility.reason||'')}</td></tr>`;
+  }).join('');
+  document.getElementById('drv-tb').innerHTML = rows||noRows(8);
+}
+
+// ─── Files ───────────────────────────────────────────────────────────────────
+async function pickDir(){
+  const dirPath = api ? await api.openDirectoryDialog() : 'C:\\Program Files (demo)';
+  if(!dirPath) return;
+  nav('files');
+  ldOn('ld-files'); tcOff('files-tc'); elOff('files-empty');
+  elOff('files-fbar');
+  const fp=document.getElementById('files-path'); fp.style.display='block'; fp.textContent='📁 '+dirPath;
+  S.files = api ? await api.scanDirectory(dirPath) : demoFiles();
+  renderFiles();
+  updateBadge('b-files', S.files);
+  ldOff('ld-files');
+  if(S.files.length>0){ tcOn('files-tc'); elOn('files-fbar'); } else elOn('files-empty');
+}
+function demoFiles(){return[
+  {name:'setup.exe',ext:'.exe',path:'C:\\tools\\setup.exe',size:2097152,compatibility:{status:'warning',reason:'インストーラー — 実行前に互換確認を推奨'}},
+  {name:'launcher.exe',ext:'.exe',path:'C:\\tools\\launcher.exe',size:204800,compatibility:{status:'compatible',reason:'互換性あり（推定）'}},
+  {name:'old_tool.com',ext:'.com',path:'C:\\tools\\old_tool.com',size:8192,compatibility:{status:'incompatible',reason:'16-bit .COMファイル — 64-bit Win11では動作不可'}},
+  {name:'run.bat',ext:'.bat',path:'C:\\tools\\run.bat',size:1024,compatibility:{status:'warning',reason:'バッチファイル — パス変更が必要な場合あり'}},
+  {name:'sync.ps1',ext:'.ps1',path:'C:\\tools\\sync.ps1',size:3072,compatibility:{status:'warning',reason:'PowerShellスクリプト — 実行ポリシーの確認が必要'}},
+  {name:'App.exe',ext:'.exe',path:'C:\\tools\\App.exe',size:15728640,compatibility:{status:'compatible',reason:'互換性あり（推定）'}},
+  {name:'helper.vbs',ext:'.vbs',path:'C:\\tools\\helper.vbs',size:512,compatibility:{status:'warning',reason:'スクリプトファイル — Win11のポリシー変更に注意'}},
+];}
+function renderFiles(){
+  const q=(document.getElementById('files-q')?.value||'').toLowerCase(), f=S.fFiles;
+  const rows=S.files.filter(f2=>(!q||(f2.name.toLowerCase().includes(q)||f2.ext.includes(q)||(f2.path||'').toLowerCase().includes(q)))&&(f==='all'||f2.compatibility.status===f)).map(f2=>{
+    const [lbl,cls]=sLabel(f2.compatibility.status);
+    const sz=f2.size>1048576?(f2.size/1048576).toFixed(1)+' MB':(f2.size/1024).toFixed(0)+' KB';
+    return `<tr><td class="nm">${E(f2.name)}</td>
+      <td><span style="font-family:var(--fm);font-size:9px;background:var(--bg3);padding:2px 6px;border-radius:2px;border:1px solid var(--bd)">${E(f2.ext)}</span></td>
+      <td class="vm">${sz}</td>
+      <td><span class="sdot ${f2.compatibility.status}"></span><span class="badge ${cls}">${lbl}</span></td>
+      <td class="rm">${E(f2.compatibility.reason||'')}</td>
+      <td><button class="aBtn ai-btn" onclick="openAiModal(${JSON.stringify(f2.name)},'')">🤖 AI</button></td></tr>`;
+  }).join('');
+  document.getElementById('files-tb').innerHTML = rows||noRows(6);
+}
+
+// ─── ZIP ─────────────────────────────────────────────────────────────────────
+async function pickZip(){
+  const zipPath=api?await api.openFileDialog():null;
+  if(!zipPath&&api) return;
+  ldOn('ld-zip'); elOff('zip-result');
+  const res=api?await api.scanZip(zipPath):{success:true,zipPath:'demo.zip',entries:demoFiles().map(f=>({...f,path:f.name}))};
+  ldOff('ld-zip');
+  if(!res.success){toast('❌ ZIP解析失敗: '+res.error);return;}
+  const inc=res.entries.filter(f=>f.compatibility.status==='incompatible').length;
+  const warn=res.entries.filter(f=>f.compatibility.status==='warning').length;
+  const comp=res.entries.filter(f=>f.compatibility.status==='compatible').length;
+  document.getElementById('zip-result').innerHTML=`
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div class="sc red" style="flex:1;padding:10px 14px"><div class="sc-lbl">非互換</div><div class="sc-val" style="font-size:22px">${inc}</div></div>
+      <div class="sc yel" style="flex:1;padding:10px 14px"><div class="sc-lbl">要確認</div><div class="sc-val" style="font-size:22px">${warn}</div></div>
+      <div class="sc grn" style="flex:1;padding:10px 14px"><div class="sc-lbl">互換あり</div><div class="sc-val" style="font-size:22px">${comp}</div></div>
+    </div>
+    <div style="font-family:var(--fm);font-size:10px;color:var(--t3);margin-bottom:8px">📦 ${E(res.zipPath)}</div>
+    <div class="tc on" style="max-height:380px">
+      <table class="dt"><thead><tr><th>ファイル名</th><th>パス</th><th>種類</th><th>サイズ</th><th>互換性</th><th>詳細</th></tr></thead>
+      <tbody>${res.entries.map(f=>{
+        const [lbl,cls]=sLabel(f.compatibility.status);
+        const sz=f.size>1048576?(f.size/1048576).toFixed(1)+' MB':(f.size/1024).toFixed(0)+' KB';
+        return `<tr><td class="nm">${E(f.name)}</td><td class="vm" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(f.path)}</td>
+          <td><span style="font-family:var(--fm);font-size:9px;background:var(--bg3);padding:2px 5px;border-radius:2px;border:1px solid var(--bd)">${E(f.ext)}</span></td>
+          <td class="vm">${sz}</td><td><span class="sdot ${f.compatibility.status}"></span><span class="badge ${cls}">${lbl}</span></td>
+          <td class="rm">${E(f.compatibility.reason||'')}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  elOn('zip-result');
+}
+
+// ─── AI Deep Check Modal ─────────────────────────────────────────────────────
+function openAiModal(name, ver){
+  if(!name.trim()){toast('アプリ名を入力してください');return;}
+  document.getElementById('ai-modal-title').textContent = `AIディープチェック: ${name}`;
+  document.getElementById('ai-modal-body').innerHTML = `
+    <div style="text-align:center;padding:40px;color:var(--t3)">
+      <div class="sring" style="margin:0 auto 14px;display:block"></div>
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:1px">Google / Microsoft / GitHub / 内部DB を並列調査中...</div>
+    </div>`;
+  document.getElementById('ai-modal').classList.add('on');
+  runAiCheck(name, ver);
+}
+function closeAiModal(){
+  document.getElementById('ai-modal').classList.remove('on');
+}
+
+async function runAiCheck(name, ver){
+  const body = document.getElementById('ai-modal-body');
+
+  // Show skeleton steps
+  body.innerHTML = `
+    <div id="ai-s-google" class="ai-step active"><span class="ai-step-ic">⟳</span><div class="ai-step-body"><div class="ai-step-title">🔍 Google検索</div><div class="ai-step-snips" id="ai-snip-google">調査中...</div></div></div>
+    <div id="ai-s-ms"     class="ai-step"       ><span class="ai-step-ic">🪟</span><div class="ai-step-body"><div class="ai-step-title">🪟 Microsoft Support</div><div class="ai-step-snips" id="ai-snip-ms">待機中...</div></div></div>
+    <div id="ai-s-gh"     class="ai-step"       ><span class="ai-step-ic">⬡</span><div class="ai-step-body"><div class="ai-step-title">⬡ GitHub Issues</div><div class="ai-step-snips" id="ai-snip-gh">待機中...</div></div></div>
+    <div id="ai-s-db"     class="ai-step"       ><span class="ai-step-ic">📋</span><div class="ai-step-body"><div class="ai-step-title">📋 内部互換DB</div><div class="ai-step-snips" id="ai-snip-db">照合中...</div></div></div>
+    <div id="ai-verdict-wrap" style="display:none"></div>`;
+
+  // Activate each step sequentially to show progress visually
+  const stepActivate = async (stepId, snipId, delay=200) => {
+    await new Promise(r=>setTimeout(r,delay));
+    document.getElementById('ai-s-'+stepId).classList.add('active');
+    document.getElementById('ai-snip-'+stepId).textContent = '調査中...';
+  };
+  stepActivate('ms',  'ms',   300);
+  stepActivate('gh',  'gh',   600);
+  stepActivate('db',  'db',   200);
+
+  let result;
+  if(api){
+    result = await api.aiDeepCheck(name, ver||'');
+  } else {
+    await new Promise(r=>setTimeout(r,1200));
+    result = demAiResult(name);
+  }
+
+  // Fill sources
+  const sourceMap = { 'Google検索':'google', 'Microsoft Support':'ms', 'GitHub Issues':'gh', '内部互換DB':'db' };
+  for(const src of (result.sources||[])){
+    const key = Object.keys(sourceMap).find(k=>src.source.includes(k.replace('Google検索','Google')));
+    const sid = sourceMap[key]||'google';
+    const stepEl = document.getElementById('ai-s-'+sid);
+    if(stepEl){
+      stepEl.classList.remove('active');
+      stepEl.classList.add('done');
+      stepEl.querySelector('.ai-step-ic').textContent='✓';
+      const snipEl = document.getElementById('ai-snip-'+sid);
+      if(snipEl){
+        if(src.error){
+          snipEl.innerHTML = `<span style="color:var(--t3)">${E(src.error)}</span>`;
+        } else if(src.snippets&&src.snippets.length>0){
+          snipEl.innerHTML = src.snippets.slice(0,3).map(s=>`<div class="ai-snip">${E(s)}</div>`).join('');
+        } else {
+          snipEl.innerHTML = '<span style="color:var(--t3)">スニペットなし</span>';
+        }
+        if(src.url){
+          snipEl.innerHTML += `<a class="src-link" onclick="(api||window.electronAPI)?.openUrl('${E(src.url)}')||window.open('${E(src.url)}')" style="margin-top:4px;display:inline-flex">🔗 ソースを開く</a>`;
+        }
+      }
+    }
+  }
+
+  // Verdict
+  const v = result.verdict||{};
+  const [vlbl,vcls,vic] = v.status==='compatible'?['互換あり','ok','✅']:v.status==='incompatible'?['非互換','ng','❌']:v.status==='warning'?['要確認','wn','⚠️']:['判定不能','unk','❓'];
+  const confColor = v.confidence==='高'?'var(--green)':v.confidence==='中'?'var(--yellow)':'var(--t3)';
+  const wrap = document.getElementById('ai-verdict-wrap');
+  wrap.innerHTML = `
+    <div class="verdict-panel ${vcls}">
+      <div class="verdict-hdr">
+        <div class="verdict-icon">${vic}</div>
+        <div>
+          <div class="verdict-label" style="color:${v.status==='compatible'?'var(--green)':v.status==='incompatible'?'var(--red)':'var(--yellow)'}">${vlbl}</div>
+          <div class="verdict-conf">信頼度: <span style="color:${confColor}">${v.confidence||'低'}</span> &nbsp;|&nbsp; 根拠: ${E(v.basis||'不明')}</div>
+        </div>
+      </div>
+      <div class="verdict-summary">${E(v.summary||'判定根拠が不十分です。各ソースを直接確認してください。')}</div>
+      ${result.sources?.find(s=>s.dbVerdict?.link)?`<a class="src-link" onclick="(api||window.electronAPI)?.openUrl('${E(result.sources.find(s=>s.dbVerdict?.link).dbVerdict.link)}')||window.open('${E(result.sources.find(s=>s.dbVerdict?.link).dbVerdict.link)}')">🔗 公式情報を確認</a>`:''}
+    </div>`;
+  wrap.style.display='block';
+}
+
+function demAiResult(name){
+  return { appName:name, sources:[
+    {source:'Google検索', snippets:[name+' は Windows 11 に対応しています。公式サイトで確認してください。'], url:'https://www.google.com'},
+    {source:'Microsoft Support', snippets:['Windows 11 compatibility information for '+name], url:'https://support.microsoft.com'},
+    {source:'GitHub Issues', snippets:['Windows 11 support confirmed in v2.0'], url:'https://github.com'},
+    {source:'内部互換DB', snippets:['内部DBに該当なし'], dbVerdict:{found:false}},
+  ], verdict:{ status:'compatible', confidence:'低', basis:'マルチソース解析', summary:'複数のソースで互換性が示唆されていますが、確定的な情報は取得できませんでした。公式サイトで最終確認してください。' } };
+}
+
+// ─── Net search ───────────────────────────────────────────────────────────────
+async function doSearch(){
+  const q=document.getElementById('net-q').value.trim();
+  if(!q) return;
+  ldOn('ld-search'); elOff('search-result');
+  const res=api?await api.searchCompatibility(q):await demoNet(q);
+  S.searchHist.unshift({query:q,res,time:new Date().toLocaleTimeString('ja-JP')});
+  if(S.searchHist.length>12) S.searchHist.pop();
+  renderHist();
+  const [lbl,cls]=sLabel(res.autoResult?.status||'unknown');
+  const snips=(res.snippets||[]).map(s=>`<div style="font-size:11px;color:var(--t2);padding:6px 0;border-bottom:1px solid var(--bd);line-height:1.55">${E(s)}</div>`).join('')||'<div style="color:var(--t3);font-size:11px;padding:8px">スニペットを取得できませんでした</div>';
+  document.getElementById('search-result').innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-top:8px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-family:var(--fd);font-size:16px;font-weight:700">${E(q)}</div>
+        <span class="badge ${cls}">${lbl}</span>
+        ${res.searchUrl?`<button class="aBtn" style="margin-left:auto" onclick="(api||window.electronAPI)?.openUrl('${E(res.searchUrl)}')||window.open('${E(res.searchUrl)}')">🌐 Googleで開く</button>`:''}
+      </div>${snips}${res.error?`<div style="color:var(--red);font-size:11px;margin-top:8px">⚠ ${E(res.error)}</div>`:''}
+    </div>`;
+  ldOff('ld-search'); elOn('search-result');
+}
+async function checkKnown(){
+  const q=document.getElementById('net-q').value.trim();
+  if(!q){toast('アプリ名を入力してください');return;}
+  const res=api?await api.checkKnownIncompatible(q):{found:false};
+  if(res.found){
+    const [lbl,cls]=sLabel(res.status);
+    document.getElementById('search-result').innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-top:8px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-family:var(--fd);font-size:16px;font-weight:700">${E(q)}</div>
+          <span class="badge ${cls}">${lbl}</span>
+          <span style="font-family:var(--fm);font-size:9px;color:var(--t3)">オフラインDB照合</span>
+        </div>
+        <div style="font-size:11px;color:var(--t2);padding:6px 0">${E(res.reason)}</div>
+        ${res.link?`<button class="aBtn" style="margin-top:8px" onclick="(api||window.electronAPI)?.openUrl('${E(res.link)}')||window.open('${E(res.link)}')">🔗 公式情報を確認</button>`:''}
+      </div>`;
+    elOn('search-result');
+  } else { toast('📋 オフラインDBに該当なし — ネット検索またはAIディープチェックをお試しください'); }
+}
+async function searchApp(name){nav('search');document.getElementById('net-q').value=name;await doSearch();}
+async function demoNet(q){ await new Promise(r=>setTimeout(r,700)); return {searchUrl:`https://www.google.com/search?q=${encodeURIComponent(q+' Windows 11')}`,snippets:[q+' はWindows 11に対応しています。'],titles:[],autoResult:{status:'compatible',confidence:'low'}};}
+function renderHist(){
+  document.getElementById('search-hist').innerHTML=S.searchHist.map(h=>{
+    const s=h.res.autoResult?.status||'unknown';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer" onclick="document.getElementById('net-q').value=${JSON.stringify(h.query)};doSearch()">
+      <span class="sdot ${s}"></span><span style="font-size:12px;flex:1">${E(h.query)}</span>
+      <span style="font-family:var(--fm);font-size:9px;color:var(--t3)">${h.time}</span></div>`;
+  }).join('');
+}
+
+// ─── GitHub ───────────────────────────────────────────────────────────────────
+const GH_QUICK=[{owner:'microsoft',repo:'vscode',label:'VS Code'},{owner:'HandBrake',repo:'HandBrake',label:'HandBrake'},{owner:'obsproject',repo:'obs-studio',label:'OBS Studio'},{owner:'mpv-player',repo:'mpv',label:'mpv'},{owner:'jqlang',repo:'jq',label:'jq'}];
+document.getElementById('gh-quick').innerHTML=GH_QUICK.map(g=>`<button class="btn" onclick="document.getElementById('gh-owner').value='${g.owner}';document.getElementById('gh-repo').value='${g.repo}';checkGithub()">${g.label}</button>`).join('');
+async function checkGithub(){
+  const owner=document.getElementById('gh-owner').value.trim(), repo=document.getElementById('gh-repo').value.trim();
+  if(!owner||!repo){toast('owner と repo を入力してください');return;}
+  ldOn('ld-gh'); elOff('gh-result');
+  const res=api?await api.checkGithubRelease({owner,repo}):await demoGH(owner,repo);
+  ldOff('ld-gh');
+  if(res.error){ document.getElementById('gh-result').innerHTML=`<div style="color:var(--red);font-size:12px;padding:12px">${E(res.error)}</div>`; }
+  else{
+    const [wlbl,wcls]=res.win11Support==='compatible'?['Win11対応確認','ok']:res.win11Support==='incompatible'?['Win11非互換','ng']:res.win11Support==='mentioned'?['Win11言及あり','wn']:['言及なし','unk'];
+    document.getElementById('gh-result').innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <div style="font-family:var(--fd);font-size:16px;font-weight:700">${E(owner)}/${E(repo)}</div>
+          <span class="badge ok">${E(res.tagName||'')}</span><span class="badge ${wcls}">${wlbl}</span>
+          <span class="vm">${E(res.publishedAt||'')}</span>
+          ${res.htmlUrl?`<button class="aBtn" style="margin-left:auto" onclick="(api||window.electronAPI)?.openUrl('${E(res.htmlUrl)}')||window.open('${E(res.htmlUrl)}')">⬡ GitHubで開く</button>`:''}
+        </div>
+        ${res.body?`<div style="font-size:11px;color:var(--t2);background:var(--bg1);border:1px solid var(--bd);border-radius:5px;padding:10px;margin-bottom:12px;line-height:1.6;white-space:pre-wrap;max-height:100px;overflow-y:auto">${E(res.body)}</div>`:''}
+        <div style="font-family:var(--fm);font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">配布アセット (${(res.assets||[]).length}件)</div>
+        ${(res.assets||[]).map(a=>{const [lbl,cls]=sLabel(a.compatibility.status);const sz=a.size>1048576?(a.size/1048576).toFixed(1)+' MB':(a.size/1024).toFixed(0)+' KB';return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)"><span class="sdot ${a.compatibility.status}"></span><span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(a.name)}</span><span class="vm">${sz}</span><span class="badge ${cls}">${lbl}</span></div>`;}).join('')||'<div style="color:var(--t3);font-size:11px">アセットなし</div>'}
+      </div>`;
+  }
+  elOn('gh-result');
+}
+async function demoGH(o,r){ await new Promise(res=>setTimeout(res,700)); return {tagName:'v1.8.2',publishedAt:'2024-01-10',name:r+' v1.8.2',htmlUrl:`https://github.com/${o}/${r}`,body:'Windows 11 compatible. Bug fixes.',win11Support:'compatible',assets:[{name:r+'-setup.exe',size:45678901,downloadCount:12340,compatibility:{status:'warning',reason:'インストーラー — 実行前に互換確認を推奨'}},{name:r+'-portable.zip',size:23456789,downloadCount:8901,compatibility:{status:'compatible',reason:'互換性あり（推定）'}}]}; }
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+function updateDash(){
+  const all=[...S.apps,...S.drivers,...S.files];
+  const inc=all.filter(i=>i.compatibility?.status==='incompatible').length;
+  const warn=all.filter(i=>i.compatibility?.status==='warning').length;
+  const comp=all.filter(i=>i.compatibility?.status==='compatible').length;
+  document.getElementById('d-inc').textContent=inc;
+  document.getElementById('d-warn').textContent=warn;
+  document.getElementById('d-comp').textContent=comp;
+  document.getElementById('d-total').textContent=all.length;
+  document.getElementById('d-issues').innerHTML=all.filter(i=>i.compatibility?.status==='incompatible').slice(0,6).map(i=>
+    `<div class="irow"><span class="sdot incompatible"></span><span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(i.name)}</span></div>`
+  ).join('')||'<div style="color:var(--green);font-size:11px;padding:8px">非互換アイテムなし ✓</div>';
+  document.getElementById('d-drvissues').innerHTML=S.drivers.filter(d=>d.compatibility.status!=='compatible').slice(0,5).map(d=>{
+    const [lbl,cls]=sLabel(d.compatibility.status);
+    return `<div class="irow"><span class="sdot ${d.compatibility.status}"></span><span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(d.name)}</span><span class="badge ${cls}" style="flex-shrink:0">${lbl}</span></div>`;
+  }).join('')||'<div style="color:var(--green);font-size:11px;padding:8px">ドライバー問題なし ✓</div>';
+  const cats={};
+  for(const i of all){const c=i.compatibility?.status||'unknown';cats[c]=(cats[c]||0)+1;}
+  const catC={incompatible:'var(--red)',warning:'var(--yellow)',compatible:'var(--green)',unknown:'var(--t3)'};
+  const catL={incompatible:'非互換',warning:'要確認',compatible:'互換あり',unknown:'不明'};
+  document.getElementById('d-cats').innerHTML=Object.entries(cats).map(([k,v])=>
+    `<div class="irow"><span style="width:8px;height:8px;border-radius:50%;background:${catC[k]};flex-shrink:0"></span><span class="ik">${catL[k]||k}</span><span class="iv">${v}件</span></div>`
+  ).join('');
+}
+function updateBadge(id,items){
+  const inc=items.filter(i=>i.compatibility?.status==='incompatible').length;
+  const warn=items.filter(i=>i.compatibility?.status==='warning').length;
+  const el=document.getElementById(id); if(!el)return;
+  el.textContent=inc>0?inc:warn>0?warn:items.length;
+  el.className='nbg '+(inc>0?'r':warn>0?'y':'g');
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+async function doExport(type){
+  const data={systemInfo:S.si,apps:S.apps,drivers:S.drivers,files:S.files,scanDate:new Date().toLocaleString('ja-JP')};
+  if(!api){toast('エクスポートはElectron環境でのみ使用可能です');return;}
+  let res;
+  if(type==='json') res=await api.exportResults(data);
+  else if(type==='html') res=await api.exportHtmlReport(data);
+  else if(type==='pdf'){toast('⏳ PDF生成中...',6000);res=await api.exportPdfReport(data);}
+  if(res?.success) toast('✓ 保存完了: '+res.path);
+}
+
+// ─── Filter ───────────────────────────────────────────────────────────────────
+function setF(f, el, type){
+  if(type==='apps') S.fApps=f;
+  else if(type==='drv') S.fDrv=f;
+  else if(type==='files') S.fFiles=f;
+  el.parentElement.querySelectorAll('.fc').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  if(type==='apps') renderApps();
+  else if(type==='drv') renderDrivers();
+  else if(type==='files') renderFiles();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function E(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function noRows(c){return `<tr><td colspan="${c}" style="text-align:center;padding:20px;color:var(--t3);font-size:11px">条件に合うアイテムが見つかりません</td></tr>`;}
+function sLabel(s){
+  if(s==='compatible') return['互換あり','ok'];
+  if(s==='warning')    return['要確認','wn'];
+  if(s==='incompatible')return['非互換','ng'];
+  return['不明','unk'];
+}
+// Close AI modal on bg click
+document.getElementById('ai-modal').addEventListener('click', e=>{if(e.target===e.currentTarget)closeAiModal();});
+</script>
+</body>
+</html>
