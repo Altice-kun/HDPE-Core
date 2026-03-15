@@ -1,31 +1,98 @@
-# HDPE Core Library
+# Win11 Compatibility Scanner
 
-Hybrid Disk Protector Extender (HDPE) Core Library is the official core component
-responsible for generating, validating, and sealing HDP-formatted data.
+Windows 10環境で動作するElectronアプリです。  
+PC・アプリ・ファイル・ZIPツールのWindows 11互換性をスキャンします。
 
-This library is designed as a **non-dummy, always-online, compatibility-strict system**
-whose purpose is to ensure structural integrity and prevent unauthorized reconstruction.
+---
 
-## Philosophy
+## 機能
 
-- No dummy logic
-- No offline support
-- No partial success
-- No backward guarantees
-- No explanation on failure
+| 機能 | 説明 |
+|------|------|
+| **システム要件チェック** | CPU世代・RAM・TPM2.0・セキュアブート等をWindows 11要件と比較 |
+| **インストール済みアプリスキャン** | レジストリから全インストールアプリを取得し互換性判定 |
+| **ファイル/フォルダスキャン** | .exe/.msi/.bat/.com等の実行ファイルを再帰的にスキャン |
+| **ZIP解析** | 配布ZIPの中身を解析し実行ファイル互換性をチェック |
+| **ネット互換検索** | Google検索でアプリのWindows 11対応情報を自動収集 |
+| **結果エクスポート** | JSON/CSV形式でスキャン結果を保存 |
 
-HDP exists only in environments that continuously meet its compatibility requirements.
+---
 
-## Components
+## セットアップ方法
 
-- Core Library (this repository)
-- HDPE GUI (frontend)
-- HDP Viewer
-- HDP Compatibility & Authentication Server
+### 必要環境
+- **Node.js** 18以上 (https://nodejs.org)
+- **npm** (Node.jsに付属)
+- Windows 10 / Windows 11
 
-## Status
+### インストール手順
 
-This repository currently contains **architecture and specification documents only**.
-No implementation is provided at this stage.
+```bash
+# 1. このフォルダに移動
+cd win11-scanner
 
-Implementation will begin only after specification freeze.
+# 2. 依存パッケージをインストール
+npm install
+
+# 3. アプリを起動
+npm start
+```
+
+### ビルド（配布用 .exe 作成）
+
+```bash
+# インストーラー付きの .exe を生成
+npm run build
+```
+
+ビルド完了後、`dist/` フォルダに `.exe` インストーラーが生成されます。
+
+---
+
+## プロジェクト構成
+
+```
+win11-scanner/
+├── src/
+│   ├── main.js       # Electronメインプロセス（スキャンロジック）
+│   ├── preload.js    # セキュアなIPC橋渡し
+│   └── index.html    # UI（HTML/CSS/JS）
+├── assets/
+│   └── icon.ico      # アプリアイコン（任意）
+├── package.json
+└── README.md
+```
+
+---
+
+## 互換性判定ロジック
+
+### アプリ判定
+- **非互換**: Internet Explorer、旧VirtualBox、旧DAEMON Tools など既知の非互換アプリ
+- **要確認**: ウイルス対策ソフト、ドライバー系ソフト、.NET 3.5依存アプリ
+- **互換あり**: 上記に該当しないアプリ
+
+### ファイル判定
+- `.com` → **非互換**（16-bit、64-bitでは動作不可）
+- `.bat` / `.cmd` → **要確認**（パス変更が必要な場合あり）
+- `.scr` → **要確認**
+- `setup*.exe` / `install*.exe` → **要確認**
+- その他 `.exe` / `.msi` → **互換あり**（推定）
+
+### ネット検索
+Googleの検索結果スニペットを取得し、"not compatible"や"supported"などのキーワードで  
+自動判定を行います（参考情報、確定ではありません）。
+
+---
+
+## 注意事項
+
+- システムスキャン（TPM・セキュアブート確認）は管理者権限が必要な場合があります
+- ネット検索は実行時にインターネット接続が必要です
+- 互換性判定は参考情報です。最終確認は各ソフトウェアの公式サイトでご確認ください
+
+---
+
+## ライセンス
+
+MIT
